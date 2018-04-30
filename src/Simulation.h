@@ -4,9 +4,11 @@
 #include <memory>
 
 #include "GameClock.h"
+#include "Shader.h"
 
 #include <X11/Xlib.h>
 
+class VertexArrayObject;
 class GlWindow;
 
 class Simulation {
@@ -28,6 +30,8 @@ private:
     void draw();
     void event_loop();
 
+    std::unique_ptr<ShaderProgram> m_shader;
+
     std::unique_ptr<GlWindow> m_window;
     GameClock m_game_clock;
 
@@ -35,6 +39,7 @@ private:
 
     bool m_is_running = true;
 
+    std::unique_ptr<VertexArrayObject> m_vao;
 };
 
 #endif

@@ -1,7 +1,10 @@
 set(SOURCES
+    ${CMAKE_CURRENT_SOURCE_DIR}/BufferObject.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/main.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/GameClock.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/GameTime.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/Shader.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/Simulation.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/VertexArrayObject.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/Window.cpp
     PARENT_SCOPE)

@@ -1,5 +1,8 @@
 #include "Simulation.h"
 
+#include "BufferObject.h"
+#include "VertexArrayObject.h"
+
 #include "GameClock.h"
 #include "GameTime.h"
 
@@ -11,6 +14,34 @@
 
 #include <thread>
 #include <iostream>
+
+struct Vertex {
+    float x;
+    float y;
+    float z;
+    float r;
+    float g;
+    float b;
+    float a;
+};
+
+std::string severity_to_string(GLenum severity) {
+    switch(severity) {
+        case GL_DEBUG_SEVERITY_HIGH: return "High";
+        case GL_DEBUG_SEVERITY_MEDIUM: return "Medium";
+        case GL_DEBUG_SEVERITY_LOW: return "Low";
+        case GL_DEBUG_SEVERITY_NOTIFICATION: return "Notification";
+        default: return "???";
+    }
+}
+
+void debug_callback(GLenum source, GLenum type, GLuint id, GLenum severity, 
+        GLsizei length, const GLchar* message, const void* userParam) 
+{
+    std::cout << "Source: " << source << " -- Type " << type << " -- ID " << id 
+        << " Severity: " << severity_to_string(severity) << " Msg: " << message << std::endl;
+}
+
 
 
 Simulation::Simulation() {
@@ -46,10 +77,10 @@ void Simulation::run() {
 }
  
 void Simulation::initialize() {
-    m_window = std::make_unique<GlWindow>(799, 600, "Starlight Glimmer");
+    m_window = std::make_unique<GlWindow>(800, 600, "Starlight Glimmer");
 
-    GLenum err = glewInit();
-    if(err != GLEW_OK) {
+    glewExperimental = GL_TRUE;
+    if(glewInit() != GLEW_OK) {
         throw std::runtime_error("GLEW failed to initialize!");
     }
 
@@ -57,8 +88,45 @@ void Simulation::initialize() {
     XSetWMProtocols(m_window->display(), m_window->window(), &wm_delete_msg, 1);
 
     m_wm_delete_msg = wm_delete_msg;
+
+    glDebugMessageCallback(debug_callback, nullptr);
  
     glClearColor(0.0, 0.0, 0.5, 1.0);
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+    glXSwapBuffers(m_window->display(), m_window->window());
+
+    auto vertex_shader = std::make_shared<Shader>(ShaderKind::Vertex);
+    vertex_shader->set_shader_source(Shader::read_glsl_source("glsl/vert.glsl"));
+    vertex_shader->compile();
+    auto fragment_shader = std::make_shared<Shader>(ShaderKind::Fragment);
+    fragment_shader->set_shader_source(Shader::read_glsl_source("glsl/frag.glsl"));
+    fragment_shader->compile();
+
+    m_shader = std::make_unique<ShaderProgram>();
+    m_shader->attach_shader(std::move(vertex_shader));
+    m_shader->attach_shader(std::move(fragment_shader));
+    m_shader->link();
+
+    m_shader->use();
+
+    glDisable(GL_DEPTH_TEST);
+    glDisable(GL_CULL_FACE);
+
+    std::array<Vertex, 3> vertices{{
+        Vertex{0.0, 1.0, -1.0, 1.0, 0.0, 0.0, 1.0},
+        Vertex{1.0, 1.0, -1.0, 0.0, 1.0, 0.0, 1.0},
+        Vertex{1.0, 0.0, -1.0, 0.0, 0.0, 1.0, 1.0},
+    }};
+
+    auto buffer = std::make_shared<BufferObject>(BufferKind::VertexBuffer);
+    buffer->bind();
+    buffer->set_data(vertices, BufferUsage::StaticDraw);
+
+    m_vao = std::make_unique<VertexArrayObject>();
+    m_vao->bind();
+    m_vao->attach_vertex_buffer(buffer, 0, 3, GL_FLOAT, sizeof(Vertex), 0);
+    m_vao->attach_vertex_buffer(buffer, 1, 4, GL_FLOAT, sizeof(Vertex), 3*sizeof(float));
+    VertexArrayObject::unbind();
 }
  
 void Simulation::update() {
@@ -67,6 +135,10 @@ void Simulation::update() {
  
 void Simulation::draw() {
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+    m_vao->bind();
+    glDrawArrays(GL_TRIANGLES, 0, 3);
+    m_vao->unbind();
 
     glXSwapBuffers(m_window->display(), m_window->window());
 }
